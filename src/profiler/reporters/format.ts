@@ -7,9 +7,13 @@
 |
 */
 
-import pc from 'picocolors'
-import { match, P } from 'ts-pattern'
+import { cliui } from '@poppinss/cliui'
 import type { ModuleTiming } from '../../types.js'
+
+/**
+ * Shared UI instance for consistent styling
+ */
+export const ui = cliui()
 
 /**
  * Icons for app file categories
@@ -54,68 +58,43 @@ export function formatDuration(ms: number): string {
  */
 export function colorDuration(ms: number): string {
   const formatted = formatDuration(ms)
-  return match(ms)
-    .with(
-      P.when((value) => value >= 100),
-      () => pc.red(formatted)
-    )
-    .with(
-      P.when((value) => value >= 50),
-      () => pc.yellow(formatted)
-    )
-    .with(
-      P.when((value) => value >= 10),
-      () => pc.cyan(formatted)
-    )
-    .otherwise(() => pc.green(formatted))
+  if (ms >= 100) return ui.colors.red(formatted)
+  if (ms >= 50) return ui.colors.yellow(formatted)
+  if (ms >= 10) return ui.colors.cyan(formatted)
+  return ui.colors.green(formatted)
 }
 
 /**
  * Creates a visual bar representing the duration
  */
-export function createBar(ms: number, maxMs: number, width: number = 20): string {
+export function createBar(ms: number, maxMs: number, width: number = 30): string {
   const ratio = Math.min(ms / maxMs, 1)
   const filled = Math.round(ratio * width)
   const bar = '\u2588'.repeat(filled) + '\u2591'.repeat(width - filled)
 
-  return match(ms)
-    .with(
-      P.when((value) => value >= 100),
-      () => pc.red(bar)
-    )
-    .with(
-      P.when((value) => value >= 50),
-      () => pc.yellow(bar)
-    )
-    .with(
-      P.when((value) => value >= 10),
-      () => pc.cyan(bar)
-    )
-    .otherwise(() => pc.green(bar))
+  if (ms >= 100) return ui.colors.red(bar)
+  if (ms >= 50) return ui.colors.yellow(bar)
+  if (ms >= 10) return ui.colors.cyan(bar)
+  return ui.colors.green(bar)
 }
 
 /**
- * Creates table styling options for cli-table3 with minimal borders
+ * Simplifies a module URL for display:
+ * - Strips file:// protocol
+ * - Converts absolute paths to relative (using cwd)
+ * - For node_modules, shows only the package path
  */
-export function createTableChars(leftPadding: string = '  ') {
-  return {
-    chars: {
-      'top': '',
-      'top-mid': '',
-      'top-left': '',
-      'top-right': '',
-      'bottom': '',
-      'bottom-mid': '',
-      'bottom-left': '',
-      'bottom-right': '',
-      'left': leftPadding,
-      'left-mid': '',
-      'mid': '',
-      'mid-mid': '',
-      'right': '',
-      'right-mid': '',
-      'middle': ' ',
-    },
-    style: { 'padding-left': 0, 'padding-right': 1 },
+export function simplifyUrl(url: string, cwd: string): string {
+  const withoutProtocol = url.replace(/^file:\/\//, '')
+
+  const nodeModulesIndex = withoutProtocol.indexOf('node_modules/')
+  if (nodeModulesIndex !== -1) {
+    return withoutProtocol.slice(nodeModulesIndex + 'node_modules/'.length)
   }
+
+  if (withoutProtocol.startsWith(cwd)) {
+    return '.' + withoutProtocol.slice(cwd.length)
+  }
+
+  return withoutProtocol
 }

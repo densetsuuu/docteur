@@ -131,7 +131,8 @@ export function ModuleView({ node, tree: _tree, onNavigate, onBack }: Props) {
       {/* Header */}
       <Box marginBottom={1}>
         <Text bold color="cyan">
-          {' '}{'\uf21e'} Module Details
+          {' '}
+          {'\uf21e'} Module Details
         </Text>
       </Box>
 
@@ -153,8 +154,9 @@ export function ModuleView({ node, tree: _tree, onNavigate, onBack }: Props) {
         <Text>
           {' '}
           Load: {formatDuration(node.timing.loadTime)}
-          {node.timing.execTime !== undefined && ` | Exec: ${formatDuration(node.timing.execTime)}`}
-          {' '}| Resolve: {formatDuration(node.timing.resolveTime)}
+          {node.timing.execTime !== undefined &&
+            ` | Exec: ${formatDuration(node.timing.execTime)}`}{' '}
+          | Resolve: {formatDuration(node.timing.resolveTime)}
         </Text>
       </Box>
 

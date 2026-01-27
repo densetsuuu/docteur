@@ -1,5 +1,5 @@
 import type { ModuleTiming } from '../types.js'
-import { simplifyUrl } from '../profiler/collector.js'
+import { simplifyUrl } from '../profiler/reporters/format.js'
 
 export interface ModuleNode {
   timing: ModuleTiming

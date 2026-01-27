@@ -1,5 +1,3 @@
-import { match } from 'ts-pattern'
-
 import type {
   AppFileCategory,
   AppFileGroup,
@@ -11,10 +9,6 @@ import type {
 } from '../types.js'
 
 type ModuleCategory = 'node' | 'adonis' | 'node_modules' | 'user'
-
-function getEffectiveTime(module: ModuleTiming): number {
-  return module.execTime ?? module.loadTime
-}
 
 interface CategoryConfig {
   displayName: string
@@ -39,167 +33,141 @@ const categoryConfigs: Record<AppFileCategory, CategoryConfig> = {
   other: { displayName: 'Other', patterns: [] },
 }
 
-function categorizeModule(url: string): ModuleCategory {
-  if (url.startsWith('node:')) return 'node'
-  if (url.includes('node_modules/@adonisjs/')) return 'adonis'
-  if (url.includes('node_modules/')) return 'node_modules'
-
-  return 'user'
-}
-
-function categorizeAppFile(url: string): AppFileCategory {
-  const path = url.toLowerCase()
-
-  for (const [category, config] of Object.entries(categoryConfigs) as [
-    AppFileCategory,
-    CategoryConfig,
-  ][]) {
-    if (config.patterns.some((pattern) => path.includes(pattern))) {
-      return category
-    }
-  }
-
-  return 'other'
-}
-
-export function groupAppFilesByCategory(modules: ModuleTiming[]): AppFileGroup[] {
-  const groups = new Map<AppFileCategory, ModuleTiming[]>()
-  const appModules = modules.filter((m) => categorizeModule(m.resolvedUrl) === 'user')
-
-  for (const module of appModules) {
-    const category = categorizeAppFile(module.resolvedUrl)
-    const existing = groups.get(category) || []
-    existing.push(module)
-    groups.set(category, existing)
-  }
-
-  return Array.from(groups.entries())
-    .map(([category, files]) => ({
-      category,
-      displayName: categoryConfigs[category].displayName,
-      files: files.sort((a, b) => getEffectiveTime(b) - getEffectiveTime(a)),
-      totalTime: files.reduce((sum, f) => sum + getEffectiveTime(f), 0),
-    }))
-    .sort((a, b) => b.totalTime - a.totalTime)
-}
-
-function extractPackageName(url: string): string | null {
-  const packageMatch = url.match(/node_modules\/(@[^/]+\/[^/]+|[^/]+)/)
-
-  return packageMatch ? packageMatch[1] : null
-}
-
 export interface PackageGroup {
   name: string
   totalTime: number
   modules: ModuleTiming[]
 }
 
-export function groupModulesByPackage(modules: ModuleTiming[]): PackageGroup[] {
-  const groups = new Map<string, ModuleTiming[]>()
+export class ProfileCollector {
+  readonly #modules: ModuleTiming[]
+  readonly #providers: ProviderTiming[]
 
-  for (const module of modules) {
-    const packageName = extractPackageName(module.resolvedUrl) || 'app'
-    const existing = groups.get(packageName) || []
-    existing.push(module)
-    groups.set(packageName, existing)
+  constructor(modules: ModuleTiming[] = [], providers: ProviderTiming[] = []) {
+    this.#modules = modules
+    this.#providers = providers
   }
 
-  return Array.from(groups.entries())
-    .map(([name, mods]) => ({
-      name,
-      totalTime: mods.reduce((sum, m) => sum + getEffectiveTime(m), 0),
-      modules: mods.sort((a, b) => getEffectiveTime(b) - getEffectiveTime(a)),
-    }))
-    .sort((a, b) => b.totalTime - a.totalTime)
-}
-
-export function computeSummary(
-  modules: ModuleTiming[],
-  providers: ProviderTiming[]
-): ProfileSummary {
-  let userModules = 0
-  let nodeModules = 0
-  let adonisModules = 0
-  let totalModuleTime = 0
-
-  for (const module of modules) {
-    const category = categorizeModule(module.resolvedUrl)
-    totalModuleTime += getEffectiveTime(module)
-
-    match(category)
-      .with('user', () => userModules++)
-      .with('node_modules', () => nodeModules++)
-      .with('adonis', () => adonisModules++)
-      .otherwise(() => {})
+  #getEffectiveTime(module: ModuleTiming): number {
+    return module.execTime ?? module.loadTime
   }
 
-  const totalProviderTime = providers.reduce((sum, p) => sum + p.totalTime, 0)
-  const appFileGroups = groupAppFilesByCategory(modules)
-
-  return {
-    totalModules: modules.length,
-    userModules,
-    nodeModules,
-    adonisModules,
-    totalModuleTime,
-    totalProviderTime,
-    appFileGroups,
+  #categorizeModule(url: string): ModuleCategory {
+    if (url.startsWith('node:')) return 'node'
+    if (url.includes('node_modules/@adonisjs/')) return 'adonis'
+    if (url.includes('node_modules/')) return 'node_modules'
+    return 'user'
   }
-}
 
-export function filterModules(modules: ModuleTiming[], config: ResolvedConfig): ModuleTiming[] {
-  return modules.filter((module) => {
-    if (getEffectiveTime(module) < config.threshold) return false
-    if (module.resolvedUrl.startsWith('node:')) return false
+  #categorizeAppFile(url: string): AppFileCategory {
+    const path = url.toLowerCase()
 
-    if (!config.includeNodeModules) {
-      const category = categorizeModule(module.resolvedUrl)
-      if (category === 'node_modules' || category === 'adonis') return false
+    for (const [category, config] of Object.entries(categoryConfigs) as [
+      AppFileCategory,
+      CategoryConfig,
+    ][]) {
+      if (config.patterns.some((pattern) => path.includes(pattern))) {
+        return category
+      }
     }
 
-    return true
-  })
-}
-
-export function sortByLoadTime(modules: ModuleTiming[]): ModuleTiming[] {
-  return [...modules].sort((a, b) => getEffectiveTime(b) - getEffectiveTime(a))
-}
-
-export function getTopSlowest(modules: ModuleTiming[], count: number): ModuleTiming[] {
-  return sortByLoadTime(modules).slice(0, count)
-}
-
-export function collectResults(
-  modules: ModuleTiming[],
-  providers: ProviderTiming[],
-  startTime: number,
-  endTime: number
-): ProfileResult {
-  const totalTime = endTime - startTime
-  const summary = computeSummary(modules, providers)
-
-  return {
-    totalTime,
-    startTime,
-    endTime,
-    modules,
-    providers,
-    summary,
-  }
-}
-
-export function simplifyUrl(url: string, cwd: string): string {
-  let simplified = url.replace(/^file:\/\//, '')
-
-  if (simplified.startsWith(cwd)) {
-    simplified = '.' + simplified.slice(cwd.length)
+    return 'other'
   }
 
-  const nodeModulesMatch = simplified.match(/node_modules\/(.+)/)
-  if (nodeModulesMatch) {
-    simplified = nodeModulesMatch[1]
+  #extractPackageName(url: string): string | null {
+    const match = url.match(/node_modules\/(@[^/]+\/[^/]+|[^/]+)/)
+    return match ? match[1] : null
   }
 
-  return simplified
+  #sortByTime(modules: ModuleTiming[]): ModuleTiming[] {
+    return [...modules].sort((a, b) => this.#getEffectiveTime(b) - this.#getEffectiveTime(a))
+  }
+
+  #sumTime(modules: ModuleTiming[]): number {
+    return modules.reduce((sum, m) => sum + this.#getEffectiveTime(m), 0)
+  }
+
+  groupAppFilesByCategory(): AppFileGroup[] {
+    const appModules = this.#modules.filter((m) => this.#categorizeModule(m.resolvedUrl) === 'user')
+    const grouped = Object.groupBy(appModules, (m) => this.#categorizeAppFile(m.resolvedUrl))
+
+    return Object.entries(grouped)
+      .filter((entry): entry is [AppFileCategory, ModuleTiming[]] => entry[1] !== undefined)
+      .map(([category, files]) => ({
+        category,
+        displayName: categoryConfigs[category].displayName,
+        files: this.#sortByTime(files),
+        totalTime: this.#sumTime(files),
+      }))
+      .sort((a, b) => b.totalTime - a.totalTime)
+  }
+
+  groupModulesByPackage(): PackageGroup[] {
+    const grouped = Object.groupBy(
+      this.#modules,
+      (m) => this.#extractPackageName(m.resolvedUrl) || 'app'
+    )
+
+    return Object.entries(grouped)
+      .filter((entry): entry is [string, ModuleTiming[]] => entry[1] !== undefined)
+      .map(([name, mods]) => ({
+        name,
+        totalTime: this.#sumTime(mods),
+        modules: this.#sortByTime(mods),
+      }))
+      .sort((a, b) => b.totalTime - a.totalTime)
+  }
+
+  computeSummary(): ProfileSummary {
+    const grouped = Object.groupBy(this.#modules, (m) => this.#categorizeModule(m.resolvedUrl))
+
+    const userModules = grouped.user?.length ?? 0
+    const nodeModules = grouped.node_modules?.length ?? 0
+    const adonisModules = grouped.adonis?.length ?? 0
+    const totalModuleTime = this.#sumTime(this.#modules)
+    const totalProviderTime = this.#providers.reduce((sum, p) => sum + p.totalTime, 0)
+
+    return {
+      totalModules: this.#modules.length,
+      userModules,
+      nodeModules,
+      adonisModules,
+      totalModuleTime,
+      totalProviderTime,
+      appFileGroups: this.groupAppFilesByCategory(),
+    }
+  }
+
+  filterModules(config: ResolvedConfig): ModuleTiming[] {
+    return this.#modules.filter((module) => {
+      if (this.#getEffectiveTime(module) < config.threshold) return false
+      if (module.resolvedUrl.startsWith('node:')) return false
+
+      if (!config.includeNodeModules) {
+        const category = this.#categorizeModule(module.resolvedUrl)
+        if (category === 'node_modules' || category === 'adonis') return false
+      }
+
+      return true
+    })
+  }
+
+  sortByLoadTime(): ModuleTiming[] {
+    return this.#sortByTime(this.#modules)
+  }
+
+  getTopSlowest(count: number): ModuleTiming[] {
+    return this.sortByLoadTime().slice(0, count)
+  }
+
+  collectResults(startTime: number, endTime: number): ProfileResult {
+    return {
+      totalTime: endTime - startTime,
+      startTime,
+      endTime,
+      modules: this.#modules,
+      providers: this.#providers,
+      summary: this.computeSummary(),
+    }
+  }
 }

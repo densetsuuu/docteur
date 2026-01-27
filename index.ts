@@ -24,18 +24,9 @@ export type {
 } from './src/types.js'
 
 /**
- * Export collector utilities for advanced usage
+ * Export collector class for advanced usage
  */
-export {
-  collectResults,
-  computeSummary,
-  filterModules,
-  sortByLoadTime,
-  getTopSlowest,
-  groupModulesByPackage,
-  groupAppFilesByCategory,
-  simplifyUrl,
-} from './src/profiler/collector.js'
+export { ProfileCollector, type PackageGroup } from './src/profiler/collector.js'
 
 /**
  * Export reporters for custom reporting
@@ -49,4 +40,6 @@ export {
   createBar,
   formatDuration,
   getEffectiveTime,
+  simplifyUrl,
+  ui,
 } from './src/profiler/reporters/format.js'

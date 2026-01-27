@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { existsSync } from 'node:fs'
 import { match, P } from 'ts-pattern'
 import type { ModuleTiming, ProviderTiming } from '../types.js'
-import { collectResults } from './collector.js'
+import { ProfileCollector } from './collector.js'
 
 const TIMEOUT_MS = 30_000
 const IGNORED_EXIT_CODES = [0, 137, 143] as const
@@ -189,7 +189,8 @@ export default abstract class BaseProfilerCommand extends BaseCommand {
       parentUrl: state.parents.get(url),
     }))
 
-    return collectResults(modules, state.providers, state.startTime, state.endTime)
+    const collector = new ProfileCollector(modules, state.providers)
+    return collector.collectResults(state.startTime, state.endTime)
   }
 
   async completed() {

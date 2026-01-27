@@ -54,14 +54,15 @@ function ItemComponent({
     // When selected, everything is blue and bold
     return (
       <Text color="blue" bold>
-        {timeStr} {sourceIcon} {fileIcon}  {displayName}
+        {timeStr} {sourceIcon} {fileIcon} {displayName}
       </Text>
     )
   }
   // Normal rendering - dim dependencies
   return (
     <Text dimColor={isDep}>
-      <Text color={isDep ? undefined : timeColor}>{timeStr}</Text> {sourceIcon} {fileIcon}  {displayName}
+      <Text color={isDep ? undefined : timeColor}>{timeStr}</Text> {sourceIcon} {fileIcon}{' '}
+      {displayName}
     </Text>
   )
 }
@@ -69,7 +70,8 @@ function ItemComponent({
 export function ListView({ tree, onSelect }: Props) {
   const items: SelectItem[] = tree.sortedByTime.slice(0, 30).map((node, index) => {
     const time = getEffectiveTime(node.timing)
-    const name = node.displayName.length > 45 ? '...' + node.displayName.slice(-42) : node.displayName
+    const name =
+      node.displayName.length > 45 ? '...' + node.displayName.slice(-42) : node.displayName
     const url = node.timing.resolvedUrl
     return {
       key: `${index}-${url}`,
