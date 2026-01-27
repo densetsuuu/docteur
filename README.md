@@ -63,12 +63,35 @@ node ace docteur:analyze
   1   app                  1        2.10ms
   2   .pnpm                1        1.25ms
 
+  ⚡ Provider Lifecycle Times
+
+  #   Provider              Register   Boot       Total
+  1   EdgeServiceProvider   0.15ms     2.76ms     2.91ms
+  2   HashServiceProvider   0.08ms     1.23ms     1.31ms
+  3   AppProvider           0.05ms     0.89ms     0.94ms
+
   No major issues detected!
 ```
 
 ## How It Works
 
-Docteur uses Node.js ESM loader hooks to intercept every `import()` and measure how long each module takes to load.
+Docteur measures cold start performance through two complementary approaches:
+
+1. **Module Loading**: Uses Node.js ESM loader hooks to intercept every `import()` and measure how long each module takes to load.
+
+2. **Provider Lifecycle**: Subscribes to AdonisJS's built-in tracing channels (`@adonisjs/application`) to measure the duration of provider lifecycle methods (register, boot, start, ready).
+
+### Provider Timing
+
+AdonisJS emits diagnostic events via Node.js `diagnostics_channel` for each provider lifecycle phase. Docteur subscribes to these channels:
+
+- `adonisjs.provider.register` - Measures `register()` method duration
+- `adonisjs.provider.boot` - Measures `boot()` method duration
+- `adonisjs.provider.start` - Measures `start()` method duration
+- `adonisjs.provider.ready` - Measures `ready()` method duration
+- `adonisjs.provider.shutdown` - Measures `shutdown()` method duration
+
+This approach is non-intrusive and uses AdonisJS's official tracing infrastructure.
 
 ### Architecture
 
@@ -138,7 +161,8 @@ docteur/
 
 - Loaded BEFORE any app code (via `--import`)
 - Registers hooks with `module.register()`
-- Stores all collected timings
+- Subscribes to AdonisJS tracing channels via `diagnostics_channel`
+- Stores all collected timings (module loads + provider lifecycle)
 - Responds to parent when results are requested
 
 #### `src/profiler/hooks.ts`
@@ -147,6 +171,7 @@ docteur/
 
 - Intercepts EVERY `import` in the application
 - Measures time for each module with `performance.now()`
+- Tracks parent-child relationships between modules
 - Sends data to `loader.ts` via MessagePort
 
 #### `src/profiler/collector.ts`

@@ -1,5 +1,5 @@
 import type { ModuleTiming } from '../types.js'
-import { simplifyUrl } from '../profiler/reporters/format.js'
+import { formatDuration, getEffectiveTime, simplifyUrl } from '../profiler/reporters/format.js'
 
 export interface ModuleNode {
   timing: ModuleTiming
@@ -15,19 +15,17 @@ export interface DependencyTree {
   sortedByTime: ModuleNode[]
 }
 
-function getEffectiveTime(timing: ModuleTiming): number {
-  return timing.loadTime
-}
-
 /**
  * Get the total time for a module including all its transitive dependencies.
  * This represents the actual impact of importing this module.
  */
-export function getSubtreeTime(node: ModuleNode): number {
+export function getSubtreeTime(node: ModuleNode, seen = new Set<ModuleNode>()): number {
+  if (seen.has(node)) return 0 // Prevent cycles
+  seen.add(node)
   const ownTime = getEffectiveTime(node.timing)
   let childrenTime = 0
   for (const child of node.children) {
-    childrenTime += getSubtreeTime(child)
+    childrenTime += getSubtreeTime(child, seen)
   }
   return ownTime + childrenTime
 }
@@ -77,30 +75,27 @@ export function buildDependencyTree(modules: ModuleTiming[], cwd: string): Depen
   return { nodeMap, roots, sortedByTime }
 }
 
-function calculateDepths(node: ModuleNode, depth: number): void {
+function calculateDepths(node: ModuleNode, depth: number, seen = new Set<ModuleNode>()): void {
+  if (seen.has(node)) return // Prevent cycles
+  seen.add(node)
   node.depth = depth
   for (const child of node.children) {
-    calculateDepths(child, depth + 1)
+    calculateDepths(child, depth + 1, seen)
   }
 }
 
 export function getImportChain(node: ModuleNode): ModuleNode[] {
   const chain: ModuleNode[] = []
+  const seen = new Set<ModuleNode>()
   let current: ModuleNode | undefined = node
 
-  while (current) {
+  while (current && !seen.has(current)) {
+    seen.add(current)
     chain.unshift(current)
     current = current.parent
   }
 
   return chain
-}
-
-export function formatDuration(ms: number): string {
-  if (ms >= 1000) {
-    return `${(ms / 1000).toFixed(2)}s`
-  }
-  return `${ms.toFixed(2)}ms`
 }
 
 export function getFileIcon(url: string): string {
@@ -155,4 +150,5 @@ export function getSourceIcon(url: string): string {
   return isDependency(url) ? '\uf487' : '\uf015' //  (package) vs  (home)
 }
 
-export { getEffectiveTime }
+// Re-export formatting utilities for convenience
+export { formatDuration, getEffectiveTime }

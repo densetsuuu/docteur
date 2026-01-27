@@ -59,6 +59,7 @@
     "ts-pattern": "^5.6.0"
   },
   "devDependencies": {
+    "@adonisjs/application": "9.0.0-next.15",
     "@adonisjs/assembler": "^8.0.0-next.28",
     "@adonisjs/core": "^7.0.0-next.20",
     "@adonisjs/eslint-config": "^3.0.0-next.9",
