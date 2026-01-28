@@ -8,7 +8,8 @@
 |
 */
 
-import { register } from 'node:module'
+import { createRequire, register } from 'node:module'
+import { join } from 'node:path'
 import { performance } from 'node:perf_hooks'
 import { MessageChannel } from 'node:worker_threads'
 
@@ -22,7 +23,8 @@ type TracingChannel = {
   }): void
 }
 
-const { tracingChannels } = (await import('@adonisjs/application')) as {
+const require = createRequire(join(process.cwd(), 'package.json'))
+const { tracingChannels } = require('@adonisjs/application') as {
   tracingChannels: Record<string, TracingChannel>
 }
 
