@@ -148,14 +148,10 @@ export function ModuleView({ node, tree: _tree, onNavigate, onBack }: Props) {
         <Text dimColor> {node.timing.resolvedUrl}</Text>
       </Box>
 
-      {/* Timing breakdown */}
+      {/* Timing */}
       <Box marginBottom={1} flexDirection="column">
-        <Text dimColor> Timing breakdown:</Text>
-        <Text>
-          {' '}
-          Load: {formatDuration(node.timing.loadTime)} | Resolve:{' '}
-          {formatDuration(node.timing.resolveTime)}
-        </Text>
+        <Text dimColor> Load time:</Text>
+        <Text> {formatDuration(node.timing.loadTime)}</Text>
       </Box>
 
       {/* Navigation list */}

@@ -35,11 +35,21 @@ export type { Reporter, ReportContext } from './src/profiler/reporters/base_repo
 export { ConsoleReporter } from './src/profiler/reporters/console_reporter.js'
 export { TuiReporter } from './src/profiler/reporters/tui_reporter.js'
 export {
-  categoryIcons,
   colorDuration,
   createBar,
   formatDuration,
+  getCategoryIcon,
   getEffectiveTime,
   simplifyUrl,
   ui,
 } from './src/profiler/reporters/format.js'
+
+/**
+ * Export registries for customization
+ */
+export {
+  categories,
+  symbols,
+  type CategoryDefinition,
+  type SymbolKey,
+} from './src/profiler/registries/index.js'

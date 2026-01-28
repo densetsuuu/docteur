@@ -3,9 +3,13 @@
 | Module Loader Hooks
 |--------------------------------------------------------------------------
 |
-| ESM loader hooks for tracking module loading times and parent-child
-| relationships. Provider timing is handled separately via AdonisJS's
-| built-in tracing channels (diagnostics_channel API).
+| ESM loader hooks for tracking module loading times.
+| Provider timing is handled separately via AdonisJS's built-in
+| tracing channels (diagnostics_channel API).
+|
+| Only tracks app files (not node_modules) to minimize overhead.
+| The hierarchical impact is calculated by summing the load times
+| of all imports from an app file.
 |
 */
 
@@ -63,6 +67,7 @@ export function initialize(data: { port: MessagePort }) {
 
 /**
  * Resolve hook - tracks parent-child relationships.
+ * Needed for hierarchical timing calculations.
  */
 export async function resolve(
   specifier: string,

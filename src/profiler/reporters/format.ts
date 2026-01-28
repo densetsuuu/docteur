@@ -8,7 +8,8 @@
 */
 
 import { cliui } from '@poppinss/cliui'
-import type { ModuleTiming } from '../../types.js'
+import type { AppFileCategory, ModuleTiming } from '../../types.js'
+import { categories, symbols } from '../registries/index.js'
 
 /**
  * Shared UI instance for consistent styling
@@ -16,31 +17,19 @@ import type { ModuleTiming } from '../../types.js'
 export const ui = cliui()
 
 /**
- * Icons for app file categories
+ * Get icon for a category
  */
-export const categoryIcons: Record<string, string> = {
-  controller: '\uD83C\uDFAE',
-  service: '\u2699\uFE0F',
-  model: '\uD83D\uDCE6',
-  middleware: '\uD83D\uDD17',
-  validator: '\u2705',
-  exception: '\uD83D\uDCA5',
-  event: '\uD83D\uDCE1',
-  listener: '\uD83D\uDC42',
-  mailer: '\uD83D\uDCE7',
-  policy: '\uD83D\uDD10',
-  command: '\u2328\uFE0F',
-  provider: '\uD83D\uDD0C',
-  config: '\u2699\uFE0F',
-  start: '\uD83D\uDE80',
-  other: '\uD83D\uDCC4',
+export function getCategoryIcon(category: AppFileCategory): string {
+  return categories[category].icon
 }
 
 /**
- * Gets the load time for a module
+ * Gets the effective time for a module.
+ * Uses subtreeTime (total including dependencies) if available,
+ * otherwise falls back to loadTime.
  */
 export function getEffectiveTime(module: ModuleTiming): number {
-  return module.loadTime
+  return module.subtreeTime ?? module.loadTime
 }
 
 /**
@@ -70,7 +59,7 @@ export function colorDuration(ms: number): string {
 export function createBar(ms: number, maxMs: number, width: number = 30): string {
   const ratio = Math.min(ms / maxMs, 1)
   const filled = Math.round(ratio * width)
-  const bar = '\u2588'.repeat(filled) + '\u2591'.repeat(width - filled)
+  const bar = symbols.barFull.repeat(filled) + symbols.barEmpty.repeat(width - filled)
 
   if (ms >= 100) return ui.colors.red(bar)
   if (ms >= 50) return ui.colors.yellow(bar)

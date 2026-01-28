@@ -55,6 +55,7 @@ export default defineConfig({
     () => import('@adonisjs/lucid/database_provider'),
     () => import('@adonisjs/auth/auth_provider'),
     () => import('@adonisjs-community/girouette/girouette_provider'),
+    () => import('#providers/slow_provider'),
   ],
 
   /*

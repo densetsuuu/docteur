@@ -9,12 +9,13 @@
 
 import type { AppFileGroup, ProfileResult, ResolvedConfig } from '../../types.js'
 import { ProfileCollector } from '../collector.js'
+import { symbols } from '../registries/index.js'
 import type { ReportContext, Reporter } from './base_reporter.js'
 import {
-  categoryIcons,
   colorDuration,
   createBar,
   formatDuration,
+  getCategoryIcon,
   getEffectiveTime,
   simplifyUrl,
   ui,
@@ -43,13 +44,15 @@ export class ConsoleReporter implements Reporter {
 
   #printHeader(): void {
     ui.logger.log('')
-    ui.logger.log(ui.colors.bold(ui.colors.cyan('  \uD83E\uDE7A Docteur - Cold Start Analysis')))
-    ui.logger.log(ui.colors.dim('  \u2500'.repeat(25)))
+    ui.logger.log(
+      ui.colors.bold(ui.colors.cyan(`  ${symbols.stethoscope} Docteur - Cold Start Analysis`))
+    )
+    ui.logger.log(ui.colors.dim(`  ${symbols.dash}`.repeat(25)))
     ui.logger.log('')
   }
 
   #printSummary(result: ProfileResult): void {
-    ui.logger.log(ui.colors.bold('  \uD83D\uDCCA Summary'))
+    ui.logger.log(ui.colors.bold(`  ${symbols.chart} Summary`))
     ui.logger.log('')
 
     const table = ui.table()
@@ -71,11 +74,11 @@ export class ConsoleReporter implements Reporter {
         ui.colors.dim('  AdonisJS modules:'),
         ui.colors.white(result.summary.adonisModules.toString()),
       ])
-      .row([ui.colors.dim('Module load time:'), colorDuration(result.summary.totalModuleTime)])
+      .row([ui.colors.dim('Module import time:'), colorDuration(result.summary.totalModuleTime)])
 
     if (result.providers.length > 0) {
       table.row([
-        ui.colors.dim('Provider boot time:'),
+        ui.colors.dim('Provider exec time:'),
         colorDuration(result.summary.totalProviderTime),
       ])
     }
@@ -96,22 +99,33 @@ export class ConsoleReporter implements Reporter {
 
     const maxTime = slowest[0] ? getEffectiveTime(slowest[0]) : 1
 
-    ui.logger.log(ui.colors.bold(`  \uD83D\uDC22 Slowest Modules (top ${config.topModules})`))
+    ui.logger.log(
+      ui.colors.bold(`  ${symbols.turtle} Slowest Module Imports (top ${config.topModules})`)
+    )
+    ui.logger.log(ui.colors.dim('  Total = with dependencies, Self = file only'))
     ui.logger.log('')
 
     const table = ui.table()
     table
-      .head([ui.colors.dim('#'), ui.colors.dim('Module'), ui.colors.dim('Time'), ui.colors.dim('')])
-      .columnWidths([6, 55, 12, 35])
+      .head([
+        ui.colors.dim('#'),
+        ui.colors.dim('Module'),
+        ui.colors.dim('Total'),
+        ui.colors.dim('Self'),
+        ui.colors.dim(''),
+      ])
+      .columnWidths([6, 45, 11, 11, 30])
 
     slowest.forEach((module, index) => {
       const simplified = simplifyUrl(module.resolvedUrl, cwd)
-      const time = getEffectiveTime(module)
+      const totalTime = getEffectiveTime(module)
+      const selfTime = module.loadTime
       table.row([
         ui.colors.dim((index + 1).toString()),
-        simplified.length > 48 ? simplified.slice(-48) : simplified,
-        colorDuration(time),
-        createBar(time, maxTime),
+        simplified.length > 40 ? simplified.slice(-40) : simplified,
+        colorDuration(totalTime),
+        ui.colors.dim(formatDuration(selfTime)),
+        createBar(totalTime, maxTime, 25),
       ])
     })
 
@@ -131,7 +145,8 @@ export class ConsoleReporter implements Reporter {
     const topGroups = groups.slice(0, 10)
     const maxTime = topGroups[0]?.totalTime || 1
 
-    ui.logger.log(ui.colors.bold('  \uD83D\uDCE6 Slowest Packages'))
+    ui.logger.log(ui.colors.bold(`  ${symbols.package} Slowest Packages`))
+    ui.logger.log(ui.colors.dim('  Total import time per npm package'))
     ui.logger.log('')
 
     const table = ui.table()
@@ -167,7 +182,8 @@ export class ConsoleReporter implements Reporter {
     const sorted = [...result.providers].sort((a, b) => b.totalTime - a.totalTime)
     const maxTime = sorted[0]?.totalTime || 1
 
-    ui.logger.log(ui.colors.bold('  \u26A1 Provider Lifecycle Times'))
+    ui.logger.log(ui.colors.bold(`  ${symbols.lightning} Provider Execution Times`))
+    ui.logger.log(ui.colors.dim('  Time spent in register() and boot() methods'))
     ui.logger.log('')
 
     const table = ui.table()
@@ -180,7 +196,7 @@ export class ConsoleReporter implements Reporter {
         ui.colors.dim('Total'),
         ui.colors.dim(''),
       ])
-      .columnWidths([5, 28, 11, 11, 11, 25])
+      .columnWidths([5, 28, 11, 11, 11, 35])
 
     sorted.forEach((provider, index) => {
       table.row([
@@ -189,7 +205,7 @@ export class ConsoleReporter implements Reporter {
         colorDuration(provider.registerTime),
         colorDuration(provider.bootTime),
         colorDuration(provider.totalTime),
-        createBar(provider.totalTime, maxTime, 22),
+        createBar(provider.totalTime, maxTime, 30),
       ])
     })
 
@@ -220,12 +236,14 @@ export class ConsoleReporter implements Reporter {
     }
 
     if (recommendations.length === 0) {
-      ui.logger.log(ui.colors.bold('  \u2705 ') + ui.colors.green('No major issues detected!'))
+      ui.logger.log(
+        ui.colors.bold(`  ${symbols.checkmark} `) + ui.colors.green('No major issues detected!')
+      )
     } else {
-      ui.logger.log(ui.colors.bold('  \uD83D\uDCA1 Recommendations'))
+      ui.logger.log(ui.colors.bold(`  ${symbols.lightbulb} Recommendations`))
       ui.logger.log('')
       recommendations.forEach((rec) => {
-        ui.logger.log(`  ${ui.colors.yellow('\u2022')} ${rec}`)
+        ui.logger.log(`  ${ui.colors.yellow(symbols.bullet)} ${rec}`)
       })
     }
 
@@ -239,13 +257,13 @@ export class ConsoleReporter implements Reporter {
       return
     }
 
-    ui.logger.log(ui.colors.bold('  \uD83D\uDCC1 App Files by Category'))
+    ui.logger.log(ui.colors.bold(`  ${symbols.folder} App Files by Category`))
     ui.logger.log('')
 
     for (const group of groups) {
       if (group.files.length === 0) continue
 
-      const icon = categoryIcons[group.category] || ''
+      const icon = getCategoryIcon(group.category)
       const header = `  ${icon} ${group.displayName} (${group.files.length} files, ${formatDuration(group.totalTime)})`
       ui.logger.log(ui.colors.bold(ui.colors.white(header)))
 
@@ -258,16 +276,18 @@ export class ConsoleReporter implements Reporter {
     const maxTime = group.files[0] ? getEffectiveTime(group.files[0]) : 1
 
     const table = ui.table()
-    table.columnWidths([45, 12, 35])
+    table.columnWidths([35, 11, 11, 30])
 
     for (const file of group.files) {
       const simplified = simplifyUrl(file.resolvedUrl, cwd)
       const fileName = simplified.split('/').pop() || simplified
-      const time = getEffectiveTime(file)
+      const totalTime = getEffectiveTime(file)
+      const selfTime = file.loadTime
       table.row([
-        fileName.length > 43 ? fileName.slice(-43) : fileName,
-        colorDuration(time),
-        createBar(time, maxTime),
+        fileName.length > 33 ? fileName.slice(-33) : fileName,
+        colorDuration(totalTime),
+        ui.colors.dim(formatDuration(selfTime)),
+        createBar(totalTime, maxTime, 25),
       ])
     }
 
@@ -275,7 +295,7 @@ export class ConsoleReporter implements Reporter {
   }
 
   #printFooter(): void {
-    ui.logger.log(ui.colors.dim('  \u2500'.repeat(25)))
+    ui.logger.log(ui.colors.dim(`  ${symbols.dash}`.repeat(25)))
     ui.logger.log(ui.colors.dim('  Run with --help for more options'))
     ui.logger.log('')
   }

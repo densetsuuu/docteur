@@ -13,7 +13,6 @@ import { register } from 'node:module'
 import { performance } from 'node:perf_hooks'
 import { MessageChannel } from 'node:worker_threads'
 
-const profileStartTime = performance.now()
 const { port1, port2 } = new MessageChannel()
 
 const parents = new Map<string, string>()
@@ -88,7 +87,7 @@ function createPhaseSubscriber(phase: string) {
     end(message: { provider: { constructor: { name: string } } }) {
       const name = message.provider.constructor.name
       const key = `${name}:${phase}`
-      const endTime = performance.now() // Capture end time immediately
+      const endTime = performance.now()
       // Only record on `end` if this is NOT an async call
       // (asyncStart hasn't fired yet, so we check on next tick)
       setTimeout(() => {
@@ -126,23 +125,6 @@ tracingChannels.providerStart.subscribe(createPhaseSubscriber('start'))
 tracingChannels.providerReady.subscribe(createPhaseSubscriber('ready'))
 tracingChannels.providerShutdown.subscribe(createPhaseSubscriber('shutdown'))
 
-declare global {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  var __docteur__: {
-    startTime: number
-    getLoadTimes: () => Map<string, number>
-    getParents: () => Map<string, string>
-    isEnabled: boolean
-  }
-}
-
-globalThis.__docteur__ = {
-  startTime: profileStartTime,
-  getLoadTimes: () => loadTimes,
-  getParents: () => parents,
-  isEnabled: true,
-}
-
 if (process.send) {
   process.on('message', (message: { type: string }) => {
     if (message.type === 'getResults') {
@@ -161,8 +143,6 @@ if (process.send) {
       process.send!({
         type: 'results',
         data: {
-          startTime: profileStartTime,
-          endTime: performance.now(),
           loadTimes: Object.fromEntries(loadTimes),
           parents: Object.fromEntries(parents),
           providers,

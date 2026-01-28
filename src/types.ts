@@ -27,24 +27,15 @@ export interface ModuleTiming {
   loadTime: number
 
   /**
-   * Time in milliseconds to resolve the module specifier
-   */
-  resolveTime: number
-
-  /**
    * The URL of the parent module that imported this one
    */
   parentUrl?: string
 
   /**
-   * Timestamp when the module started loading
+   * Total time including all transitive dependencies.
+   * This represents the actual impact of importing this module.
    */
-  startTime: number
-
-  /**
-   * Timestamp when the module finished loading
-   */
-  endTime: number
+  subtreeTime?: number
 }
 
 /**
@@ -95,16 +86,6 @@ export interface ProfileResult {
    * Total cold start time in milliseconds
    */
   totalTime: number
-
-  /**
-   * Timestamp when profiling started
-   */
-  startTime: number
-
-  /**
-   * Timestamp when profiling ended
-   */
-  endTime: number
 
   /**
    * All module timing data

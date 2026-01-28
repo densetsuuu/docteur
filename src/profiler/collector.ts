@@ -7,31 +7,9 @@ import type {
   ProviderTiming,
   ResolvedConfig,
 } from '../types.js'
+import { categories, type CategoryDefinition } from './registries/index.js'
 
 type ModuleCategory = 'node' | 'adonis' | 'node_modules' | 'user'
-
-interface CategoryConfig {
-  displayName: string
-  patterns: string[]
-}
-
-const categoryConfigs: Record<AppFileCategory, CategoryConfig> = {
-  controller: { displayName: 'Controllers', patterns: ['/controllers/', '_controller.'] },
-  service: { displayName: 'Services', patterns: ['/services/', '_service.'] },
-  model: { displayName: 'Models', patterns: ['/models/', '/model/'] },
-  middleware: { displayName: 'Middleware', patterns: ['/middleware/', '_middleware.'] },
-  validator: { displayName: 'Validators', patterns: ['/validators/', '_validator.'] },
-  exception: { displayName: 'Exceptions', patterns: ['/exceptions/', '_exception.'] },
-  event: { displayName: 'Events', patterns: ['/events/', '_event.'] },
-  listener: { displayName: 'Listeners', patterns: ['/listeners/', '_listener.'] },
-  mailer: { displayName: 'Mailers', patterns: ['/mailers/', '_mailer.'] },
-  policy: { displayName: 'Policies', patterns: ['/policies/', '_policy.'] },
-  command: { displayName: 'Commands', patterns: ['/commands/', '_command.'] },
-  provider: { displayName: 'Providers', patterns: ['/providers/', '_provider.'] },
-  config: { displayName: 'Config', patterns: ['/config/'] },
-  start: { displayName: 'Start Files', patterns: ['/start/'] },
-  other: { displayName: 'Other', patterns: [] },
-}
 
 export interface PackageGroup {
   name: string
@@ -42,14 +20,78 @@ export interface PackageGroup {
 export class ProfileCollector {
   readonly #modules: ModuleTiming[]
   readonly #providers: ProviderTiming[]
+  #childrenMap: Map<string, string[]> | null = null
 
   constructor(modules: ModuleTiming[] = [], providers: ProviderTiming[] = []) {
     this.#modules = modules
     this.#providers = providers
+    // Only compute subtree times if not already calculated
+    // (avoids recalculating with incomplete dependency graph after filtering)
+    if (modules.length > 0 && modules[0].subtreeTime === undefined) {
+      this.#computeSubtreeTimes()
+    }
+  }
+
+  /**
+   * Builds a map of parent URL -> children URLs
+   */
+  #buildChildrenMap(): Map<string, string[]> {
+    if (this.#childrenMap) return this.#childrenMap
+
+    this.#childrenMap = new Map()
+    for (const module of this.#modules) {
+      if (module.parentUrl) {
+        const children = this.#childrenMap.get(module.parentUrl) || []
+        children.push(module.resolvedUrl)
+        this.#childrenMap.set(module.parentUrl, children)
+      }
+    }
+    return this.#childrenMap
+  }
+
+  /**
+   * Computes subtree time for a module (its load time + all transitive dependencies)
+   */
+  #computeSubtreeTime(
+    url: string,
+    moduleMap: Map<string, ModuleTiming>,
+    childrenMap: Map<string, string[]>,
+    seen: Set<string>
+  ): number {
+    if (seen.has(url)) return 0 // Prevent cycles
+    seen.add(url)
+
+    const module = moduleMap.get(url)
+    if (!module) return 0
+
+    let total = module.loadTime
+    const children = childrenMap.get(url) || []
+    for (const childUrl of children) {
+      total += this.#computeSubtreeTime(childUrl, moduleMap, childrenMap, seen)
+    }
+    return total
+  }
+
+  /**
+   * Computes subtreeTime for all modules
+   */
+  #computeSubtreeTimes(): void {
+    const moduleMap = new Map(this.#modules.map((m) => [m.resolvedUrl, m]))
+    const childrenMap = this.#buildChildrenMap()
+
+    for (const module of this.#modules) {
+      module.subtreeTime = this.#computeSubtreeTime(
+        module.resolvedUrl,
+        moduleMap,
+        childrenMap,
+        new Set()
+      )
+    }
   }
 
   #getEffectiveTime(module: ModuleTiming): number {
-    return module.loadTime
+    // Use subtreeTime if available, otherwise loadTime
+    return module.subtreeTime ?? module.loadTime
   }
 
   #categorizeModule(url: string): ModuleCategory {
@@ -62,9 +104,9 @@ export class ProfileCollector {
   #categorizeAppFile(url: string): AppFileCategory {
     const path = url.toLowerCase()
 
-    for (const [category, config] of Object.entries(categoryConfigs) as [
+    for (const [category, config] of Object.entries(categories) as [
       AppFileCategory,
-      CategoryConfig,
+      CategoryDefinition,
     ][]) {
       if (config.patterns.some((pattern) => path.includes(pattern))) {
         return category
@@ -95,7 +137,7 @@ export class ProfileCollector {
       .filter((entry): entry is [AppFileCategory, ModuleTiming[]] => entry[1] !== undefined)
       .map(([category, files]) => ({
         category,
-        displayName: categoryConfigs[category].displayName,
+        displayName: categories[category].displayName,
         files: this.#sortByTime(files),
         totalTime: this.#sumTime(files),
       }))
@@ -160,11 +202,9 @@ export class ProfileCollector {
     return this.sortByLoadTime().slice(0, count)
   }
 
-  collectResults(startTime: number, endTime: number): ProfileResult {
+  collectResults(totalTime: number): ProfileResult {
     return {
-      totalTime: endTime - startTime,
-      startTime,
-      endTime,
+      totalTime,
       modules: this.#modules,
       providers: this.#providers,
       summary: this.computeSummary(),
