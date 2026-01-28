@@ -23,7 +23,7 @@ type TracingChannel = {
   }): void
 }
 
-const require = createRequire(join(process.cwd(), 'package.json'))
+const require = createRequire(join(process.cwd(), 'node_modules', '_'))
 const { tracingChannels } = require('@adonisjs/application') as {
   tracingChannels: Record<string, TracingChannel>
 }
