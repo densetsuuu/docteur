@@ -38,7 +38,7 @@ export interface ProfileOptions {
 }
 
 export function findLoaderPath(): string {
-  return fileURLToPath(import.meta.resolve('docteur/profiler/loader'))
+  return fileURLToPath(import.meta.resolve('@densetsuuu/docteur/profiler/loader'))
 }
 
 export function findEntryPoint(cwd: string, entry?: string): string {
