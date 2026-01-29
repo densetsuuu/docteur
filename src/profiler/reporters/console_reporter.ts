@@ -7,9 +7,9 @@
 |
 */
 
-import type { AppFileGroup, ProfileResult, ResolvedConfig } from '../../types.js'
-import { ProfileCollector } from '../collector.js'
-import { symbols } from '../registries/index.js'
+import type { AppFileGroup, ProfileResult, ResolvedConfig } from '#types'
+import { ProfileCollector } from '#profiler/collector'
+import { symbols } from '#registries/index'
 import type { ReportContext, Reporter } from './base_reporter.js'
 import {
   colorDuration,

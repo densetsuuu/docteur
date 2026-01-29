@@ -9,7 +9,7 @@ import {
   isDependency,
   type TimeColor,
 } from '../tree.js'
-import { symbols } from '../../profiler/registries/index.js'
+import { symbols } from '#registries/index'
 
 interface Props {
   tree: DependencyTree

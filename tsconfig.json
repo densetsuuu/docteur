@@ -4,7 +4,13 @@
     "rootDir": "./",
     "outDir": "./build",
     "jsx": "react-jsx",
-    "jsxImportSource": "react"
+    "jsxImportSource": "react",
+    "paths": {
+      "#registries/*": ["./src/registries/*"],
+      "#types": ["./src/types"],
+      "#profiler/*": ["./src/profiler/*"],
+      "#xray/*": ["./src/xray/*"]
+    }
   },
   "exclude": ["node_modules", "build", "playground"]
 }

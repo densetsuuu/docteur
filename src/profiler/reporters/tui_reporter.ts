@@ -11,7 +11,7 @@
 import React from 'react'
 import { render } from 'ink'
 import type { Reporter, ReportContext } from './base_reporter.js'
-import { XRayApp } from '../../xray/components/XRayApp.js'
+import { XRayApp } from '#xray/components/XRayApp'
 
 export class TuiReporter implements Reporter {
   /**

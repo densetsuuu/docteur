@@ -92,6 +92,12 @@
       "optional": true
     }
   },
+  "imports": {
+    "#registries/*": "./build/src/registries/*.js",
+    "#types": "./build/src/types.js",
+    "#profiler/*": "./build/src/profiler/*.js",
+    "#xray/*": "./build/src/xray/*.js"
+  },
   "publishConfig": {
     "access": "public",
     "tag": "latest"

@@ -9,11 +9,12 @@
 */
 
 import { fork } from 'node:child_process'
-import { join } from 'node:path'
 import { existsSync } from 'node:fs'
-import type { ModuleTiming, ProfileResult } from '../types.js'
+import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
+import type { ModuleTiming, ProfileResult } from '#types'
 import { ProfileCollector } from './collector.js'
-import { simplifyUrl } from './reporters/format.js'
+import { simplifyUrl } from '#profiler/reporters/format'
 
 const TIMEOUT_MS = 30_000
 
@@ -75,7 +76,7 @@ function runProfiledProcess(
       done: false,
     }
 
-    const child = fork(entryPoint, [], {
+    const child = fork(pathToFileURL(entryPoint).href, [], {
       cwd,
       stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
       execArgv: ['--import', loaderPath, '--import', '@poppinss/ts-exec', '--no-warnings'],

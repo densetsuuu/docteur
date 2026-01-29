@@ -1,7 +1,7 @@
 import { defineCommand } from 'citty'
-import { isAdonisProject, profile } from '../../profiler/profiler.js'
-import { ConsoleReporter } from '../../profiler/reporters/console_reporter.js'
-import { ui } from '../../profiler/reporters/format.js'
+import { isAdonisProject, profile } from '#profiler/profiler'
+import { ConsoleReporter } from '#profiler/reporters/console_reporter'
+import { ui } from '#profiler/reporters/format'
 
 export const diagnoseCommand = defineCommand({
   meta: {

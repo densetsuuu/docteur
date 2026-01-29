@@ -11,7 +11,7 @@ import {
   getTimeColor,
   isDependency,
 } from '../tree.js'
-import { symbols } from '../../profiler/registries/index.js'
+import { symbols } from '#registries/index'
 
 interface Props {
   node: ModuleNode

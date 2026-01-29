@@ -7,7 +7,7 @@
 |
 */
 
-import type { ProfileResult, ResolvedConfig } from '../../types.js'
+import type { ProfileResult, ResolvedConfig } from '#types'
 
 /**
  * Context passed to reporters containing all data needed for rendering.

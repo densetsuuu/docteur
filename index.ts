@@ -56,4 +56,4 @@ export {
   symbols,
   type CategoryDefinition,
   type SymbolKey,
-} from './src/profiler/registries/index.js'
+} from './src/registries/index.js'

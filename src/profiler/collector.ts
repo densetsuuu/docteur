@@ -17,8 +17,8 @@ import type {
   ProfileSummary,
   ProviderTiming,
   ResolvedConfig,
-} from '../types.js'
-import { categories } from './registries/index.js'
+} from '#types'
+import { categories } from '#registries/index'
 
 export interface PackageGroup {
   name: string

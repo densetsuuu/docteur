@@ -8,7 +8,7 @@
 |
 */
 
-import type { AppFileCategory } from '../../types.js'
+import type { AppFileCategory } from '#types'
 import { symbols } from './symbols.js'
 
 export interface CategoryDefinition {

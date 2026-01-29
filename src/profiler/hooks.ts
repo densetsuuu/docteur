@@ -9,23 +9,17 @@
 |
 */
 
-import type { MessagePort } from 'node:worker_threads'
+import type { InitializeHook, LoadHook, ResolveHook } from 'node:module'
 import { performance } from 'node:perf_hooks'
-
-type ResolveFn = (specifier: string, context?: { parentURL?: string }) => Promise<{ url: string }>
-
-type LoadFn = (
-  url: string,
-  context?: { format?: string }
-) => Promise<{ format: string; source: string | ArrayBuffer | SharedArrayBuffer }>
+import type { MessagePort } from 'node:worker_threads'
 
 let port: MessagePort
 
-export function initialize(data: { port: MessagePort }) {
+export const initialize: InitializeHook<{ port: MessagePort }> = (data) => {
   port = data.port
 }
 
-export async function resolve(specifier: string, context: { parentURL?: string }, next: ResolveFn) {
+export const resolve: ResolveHook = async (specifier, context, next) => {
   const result = await next(specifier, context)
 
   if (context.parentURL && result.url.startsWith('file://')) {
@@ -35,7 +29,7 @@ export async function resolve(specifier: string, context: { parentURL?: string }
   return result
 }
 
-export async function load(url: string, context: { format?: string }, next: LoadFn) {
+export const load: LoadHook = async (url, context, next) => {
   if (!url.startsWith('file://')) {
     return next(url, context)
   }

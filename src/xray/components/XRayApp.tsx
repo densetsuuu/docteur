@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useApp, useInput, useStdout } from 'ink'
-import type { ProfileResult, ProviderTiming } from '../../types.js'
+import type { ProfileResult, ProviderTiming } from '#types'
 import { buildDependencyTree, type ModuleNode, type DependencyTree } from '../tree.js'
 import { ListView } from './ListView.js'
 import { ModuleView } from './ModuleView.js'

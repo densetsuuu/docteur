@@ -8,9 +8,9 @@
 |
 */
 
-import type { ModuleTiming } from '../types.js'
-import { formatDuration, getEffectiveTime, simplifyUrl } from '../profiler/reporters/format.js'
-import { fileIcons, symbols } from '../profiler/registries/index.js'
+import type { ModuleTiming } from '#types'
+import { formatDuration, getEffectiveTime, simplifyUrl } from '#profiler/reporters/format'
+import { fileIcons, symbols } from '#registries/index'
 
 export interface ModuleNode {
   timing: ModuleTiming

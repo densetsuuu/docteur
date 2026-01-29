@@ -1,7 +1,7 @@
 import { defineCommand } from 'citty'
-import { isAdonisProject, profile } from '../../profiler/profiler.js'
-import { TuiReporter } from '../../profiler/reporters/tui_reporter.js'
-import { ui } from '../../profiler/reporters/format.js'
+import { isAdonisProject, profile } from '#profiler/profiler'
+import { TuiReporter } from '#profiler/reporters/tui_reporter'
+import { ui } from '#profiler/reporters/format'
 
 export const xrayCommand = defineCommand({
   meta: {

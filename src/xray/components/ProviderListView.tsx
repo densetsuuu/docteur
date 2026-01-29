@@ -1,8 +1,8 @@
 import { Box, Text } from 'ink'
 import SelectInput from 'ink-select-input'
-import type { ProviderTiming } from '../../types.js'
+import type { ProviderTiming } from '#types'
 import { formatDuration, getTimeColor, type TimeColor } from '../tree.js'
-import { symbols } from '../../profiler/registries/index.js'
+import { symbols } from '#registries/index'
 
 interface Props {
   providers: ProviderTiming[]

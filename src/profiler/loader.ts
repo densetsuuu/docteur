@@ -28,16 +28,12 @@ const { tracingChannels } = require('@adonisjs/application') as {
   tracingChannels: Record<string, TracingChannel>
 }
 
-// Module timing data from hooks
+/**
+ * Module timing data collected via ESM hooks
+ */
 const parents = new Map<string, string>()
 const loadTimes = new Map<string, number>()
 
-// Provider timing data
-const providerPhases = new Map<string, Record<string, number>>()
-const providerStarts = new Map<string, number>()
-const asyncCalls = new Set<string>()
-
-// Set up message channel for hooks
 const { port1, port2 } = new MessageChannel()
 port1.unref()
 
@@ -52,59 +48,63 @@ register('./hooks.js', {
   transferList: [port2],
 })
 
-// Subscribe to provider lifecycle phases
-// For async methods: start -> end -> asyncStart -> asyncEnd (we wait for asyncEnd)
-// For sync methods: start -> end (we record on end, but defer to check if async fires)
+/**
+ * Provider lifecycle timing via tracing channels.
+ *
+ * Tracing channels emit: start → end (sync) or start → end → asyncStart → asyncEnd (async).
+ * We defer sync recording with setTimeout so asyncStart can claim the phase first.
+ */
+const providerPhases = new Map<string, Record<string, number>>()
+const starts = new Map<string, number>()
+const asyncPhases = new Set<string>()
 
-function getProviderName(msg: unknown) {
+function name(msg: unknown) {
   return (msg as { provider: { constructor: { name: string } } }).provider.constructor.name
 }
 
-function recordPhase(name: string, phase: string, endTime: number) {
-  const key = `${name}:${phase}`
-  const start = providerStarts.get(key)
+function record(provider: string, phase: string, endTime: number) {
+  const start = starts.get(`${provider}:${phase}`)
   if (start === undefined) return
 
-  const phases = providerPhases.get(name) || {}
+  const phases = providerPhases.get(provider) ?? {}
   phases[phase] = endTime - start
-  providerPhases.set(name, phases)
-  providerStarts.delete(key)
+  providerPhases.set(provider, phases)
+  starts.delete(`${provider}:${phase}`)
 }
 
-function subscribePhase(channel: TracingChannel, phase: string) {
-  channel.subscribe({
+const phases = ['register', 'boot', 'start', 'ready', 'shutdown'] as const
+
+for (const phase of phases) {
+  const channelKey =
+    `provider${phase[0].toUpperCase()}${phase.slice(1)}` as keyof typeof tracingChannels
+
+  tracingChannels[channelKey].subscribe({
     start(msg) {
-      providerStarts.set(`${getProviderName(msg)}:${phase}`, performance.now())
+      starts.set(`${name(msg)}:${phase}`, performance.now())
     },
     end(msg) {
-      const name = getProviderName(msg)
-      const key = `${name}:${phase}`
+      const provider = name(msg)
       const endTime = performance.now()
-
-      // Defer to check if this becomes async (asyncStart fires before our setTimeout)
+      const key = `${provider}:${phase}`
       setTimeout(() => {
-        if (!asyncCalls.has(key)) recordPhase(name, phase, endTime)
+        if (!asyncPhases.has(key)) record(provider, phase, endTime)
       }, 0)
     },
     asyncStart(msg) {
-      asyncCalls.add(`${getProviderName(msg)}:${phase}`)
+      asyncPhases.add(`${name(msg)}:${phase}`)
     },
     asyncEnd(msg) {
-      const name = getProviderName(msg)
-      recordPhase(name, phase, performance.now())
-      asyncCalls.delete(`${name}:${phase}`)
+      const provider = name(msg)
+      record(provider, phase, performance.now())
+      asyncPhases.delete(`${provider}:${phase}`)
     },
     error() {},
   })
 }
 
-subscribePhase(tracingChannels.providerRegister, 'register')
-subscribePhase(tracingChannels.providerBoot, 'boot')
-subscribePhase(tracingChannels.providerStart, 'start')
-subscribePhase(tracingChannels.providerReady, 'ready')
-subscribePhase(tracingChannels.providerShutdown, 'shutdown')
-
-// Send results to parent process when requested
+/**
+ * IPC: send collected results to parent process
+ */
 if (process.send) {
   process.on('message', (msg: { type: string }) => {
     if (msg.type !== 'getResults') return

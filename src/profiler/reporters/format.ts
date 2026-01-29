@@ -8,8 +8,8 @@
 */
 
 import { cliui } from '@poppinss/cliui'
-import type { AppFileCategory, ModuleTiming } from '../../types.js'
-import { categories, symbols } from '../registries/index.js'
+import type { AppFileCategory, ModuleTiming } from '#types'
+import { categories, symbols } from '#registries/index'
 
 /**
  * Shared UI instance for consistent styling
