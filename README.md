@@ -150,7 +150,7 @@ Docteur measures cold start performance through two complementary approaches:
 ## Requirements
 
 - AdonisJS v7+
-- Node.js 21+
+- Node.js 22+
 
 ## License
 
